@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "username": "chris55",
+    "password": "12345",
+    "role": "Agronomist",
+    "payrollNumber": "A1001",
+    "createdAt": "2025-08-25T09:46:37.490Z"
+  },
+  {
+    "id": 2,
+    "username": "chris66",
+    "password": "1234",
+    "role": "GeneralManager",
+    "payrollNumber": "G9001",
+    "createdAt": "2025-08-25T09:47:30.164Z"
+  },
+  {
+    "id": 3,
+    "username": "chris57",
+    "password": "1234",
+    "role": "Viewer",
+    "payrollNumber": "V3001",
+    "createdAt": "2025-08-25T10:29:44.828Z"
+  }
+]

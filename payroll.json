@@ -1,0 +1,6 @@
+[
+  { "payrollNumber": "A1001", "role": "Agronomist" },
+  { "payrollNumber": "S2001", "role": "Supervisor" },
+  { "payrollNumber": "V3001", "role": "Viewer" },
+  { "payrollNumber": "G9001", "role": "GeneralManager" }
+]

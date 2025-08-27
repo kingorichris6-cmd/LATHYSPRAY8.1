@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Account</title>
+  <style>
+    body{font-family:Arial;margin:0;height:100vh;display:flex;justify-content:center;align-items:center;background:#eef5f1}
+    .card{background:#fff;padding:24px;border-radius:12px;width:360px;box-shadow:0 4px 30px rgba(0,0,0,.08)}
+    input,select,button{width:100%;padding:10px;margin:6px 0;border-radius:8px;border:1px solid #ddd;box-sizing:border-box}
+    button{background:#138a36;color:#fff;border:0;cursor:pointer}
+    a{color:#138a36;text-decoration:none}
+    #msg{color:#d33}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Create Account</h2>
+    <input id="username" name="username" placeholder="Username" required>
+    <input id="password" name="password" type="password" placeholder="Password" required>
+    <input id="payrollNumber" name="payrollNumber" placeholder="Payroll Number" required>
+    <select id="role" name="role" required>
+      <option value="">Select Role</option>
+      <option>Agronomist</option>
+      <option>Supervisor</option>
+      <option>Viewer</option>
+      <option>GeneralManager</option>
+    </select>
+    <button onclick="register()">Register</button>
+    <p><a href="login.html">Back to Login</a></p>
+    <p id="msg"></p>
+  </div>
+
+<script>
+async function register(){
+  const username=document.getElementById('username').value.trim();
+  const password=document.getElementById('password').value;
+  const role=document.getElementById('role').value;
+  const payrollNumber=document.getElementById('payrollNumber').value.trim();
+  if(!username||!password||!role||!payrollNumber){document.getElementById('msg').innerText='All fields are required';return;}
+  const res=await fetch('/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password,role,payrollNumber})});
+  const data=await res.json();
+  if(!data.success){document.getElementById('msg').innerText=data.message||'Registration failed';return;}
+  alert('✅ Account created. Please login.');
+  location.href='login.html';
+}
+</script>
+</body>
+</html>

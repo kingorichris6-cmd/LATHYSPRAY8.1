@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Farm Report</title>
+  <style>
+    body { font-family: Arial; background:#f4fbff; margin:0; padding:16px; }
+    .topbar { display:flex; gap:10px; align-items:center; }
+    .topbar a, .topbar button { padding:8px 10px; border-radius:8px; border:0; cursor:pointer; background:#138a36; color:#fff; text-decoration:none }
+    .card { background:#fff; border:1px solid #e7eef5; border-radius:12px; padding:12px; margin:12px 0; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap:8px; }
+    .table-wrap { overflow:auto; border:1px solid #e7eef5; border-radius:8px; background:#fff; margin-top:12px; }
+    table { width:100%; border-collapse: collapse; }
+    th, td { border:1px solid #e6e6e6; padding:6px; }
+    th { background:#d7efff; }
+    canvas { max-width:100%; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="topbar">
+    <a href="index.html">Home</a>
+    <a href="viewer.html">Viewer</a>
+    <a href="supervisor.html">Supervisor</a>
+    <a href="agronomist.html">Agronomist</a>
+    <button style="margin-left:auto" onclick="logout()">Logout</button>
+  </div>
+
+  <h1>Farm Report</h1>
+
+  <div class="card">
+    <div class="grid">
+      <!-- ADDED: year field (first) -->
+      <input id="year" list="dl_year" placeholder="Year (e.g., 2025)">
+      <input id="weekRange" list="dl_week" placeholder="Week Range (e.g. 1-4)">
+      <input id="farm" list="dl_farm" placeholder="Farm">
+      <input id="greenhouse" list="dl_gh" placeholder="Greenhouse">
+      <input id="bed" list="dl_bed" placeholder="Bed">
+      <input id="crop" list="dl_crop" placeholder="Crop">
+      <input id="variety" list="dl_variety" placeholder="Variety">
+      <input id="pest" list="dl_pest" placeholder="Pest">
+      <input id="disease" list="dl_dis" placeholder="Disease">
+      <input id="pestRate" type="number" step="0.01" placeholder="Pest Rate">
+      <input id="diseaseRate" type="number" step="0.01" placeholder="Disease Rate">
+    </div>
+    <div style="margin-top:10px; display:flex; gap:8px; align-items:center;">
+      <button onclick="addEntry()">Add Entry</button>
+      <div style="margin-left:auto; display:flex; gap:6px; align-items:center;">
+        <input id="q" placeholder="Search history...">
+        <button onclick="search()">Search</button>
+        <button onclick="clearSearch()">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <datalist id="dl_year"></datalist>
+  <datalist id="dl_week"></datalist>
+  <datalist id="dl_farm"></datalist>
+  <datalist id="dl_gh"></datalist>
+  <datalist id="dl_bed"></datalist>
+  <datalist id="dl_crop"></datalist>
+  <datalist id="dl_variety"></datalist>
+  <datalist id="dl_pest"></datalist>
+  <datalist id="dl_dis"></datalist>
+
+  <div class="card">
+    <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px;">
+      <input id="filterGH" list="dl_gh" placeholder="Greenhouse for charts">
+      <button onclick="renderCharts()">Draw Charts</button>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+      <canvas id="pestChart"></canvas>
+      <canvas id="diseaseChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card table-wrap">
+    <h3>Historical Data</h3>
+    <table id="hist">
+      <thead>
+        <tr>
+          <th>ID</th><th>Year</th><th>Week Range</th><th>Farm</th><th>Greenhouse</th><th>Bed</th><th>Crop</th><th>Variety</th>
+          <th>Pest</th><th>Disease</th><th>Pest Rate</th><th>Disease Rate</th><th>Created At</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+<script>
+let data = [];
+let pestChart, diseaseChart;
+
+const get = id => document.getElementById(id);
+
+async function load(){
+  try{
+    const res = await fetch('/farmreport', { credentials: 'same-origin' });
+    if (!res.ok) {
+      if (res.status === 401) location.href='login.html';
+      return;
+    }
+    data = await res.json();
+    renderTable();
+    buildDatalists();
+  }catch(err){ console.error(err); alert('Load failed'); }
+}
+
+function renderTable(){
+  const tb = document.querySelector('#hist tbody');
+  tb.innerHTML = data.map(r => `<tr>
+    <td>${r.id||''}</td>
+    <td>${r.year||''}</td>
+    <td>${r.weekRange||''}</td>
+    <td>${r.farm||''}</td>
+    <td>${r.greenhouse||''}</td>
+    <td>${r.bed||''}</td>
+    <td>${r.crop||''}</td>
+    <td>${r.variety||''}</td>
+    <td>${r.pest||''}</td>
+    <td>${r.disease||''}</td>
+    <td>${r.pestRate||0}</td>
+    <td>${r.diseaseRate||0}</td>
+    <td>${r.createdAt||''}</td>
+  </tr>`).join('');
+}
+
+function unique(arr, key){ const s=new Set(); arr.forEach(x=>{ if(x && x[key]) s.add(String(x[key])); }); return [...s].sort(); }
+function fillDL(id, vals){ const dl=document.getElementById(id); const have=new Set([...dl.children].map(o=>o.value)); vals.forEach(v=>{ if(!have.has(v)){ const o=document.createElement('option'); o.value=v; dl.appendChild(o);} }); }
+function buildDatalists(){
+  fillDL('dl_year', unique(data,'year'));
+  fillDL('dl_week', unique(data,'weekRange'));
+  fillDL('dl_farm', unique(data,'farm'));
+  fillDL('dl_gh', unique(data,'greenhouse'));
+  fillDL('dl_bed', unique(data,'bed'));
+  fillDL('dl_crop', unique(data,'crop'));
+  fillDL('dl_variety', unique(data,'variety'));
+  fillDL('dl_pest', unique(data,'pest'));
+  fillDL('dl_dis', unique(data,'disease'));
+}
+
+async function addEntry(){
+  const payload = {
+    year: get('year').value.trim(),                 // ADDED: send year
+    weekRange: get('weekRange').value.trim(),
+    farm: get('farm').value.trim(),
+    greenhouse: get('greenhouse').value.trim(),
+    bed: get('bed').value.trim(),
+    crop: get('crop').value.trim(),
+    variety: get('variety').value.trim(),
+    pest: get('pest').value.trim(),
+    disease: get('disease').value.trim(),
+    pestRate: Number(get('pestRate').value)||0,
+    diseaseRate: Number(get('diseaseRate').value)||0
+  };
+  if(!payload.weekRange || !payload.farm || !payload.greenhouse){ alert('Week range, farm and greenhouse required'); return; }
+  try{
+    const res = await fetch('/farmreport', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const d = await res.json();
+    if (!d.success) { alert('Save failed'); return; }
+    // clear (including year)
+    ['year','weekRange','farm','greenhouse','bed','crop','variety','pest','disease','pestRate','diseaseRate'].forEach(id=>get(id).value='');
+    await load();
+  }catch(err){ console.error(err); alert('Save failed'); }
+}
+
+function destroyCharts(){ if(pestChart){ pestChart.destroy(); pestChart=null; } if(diseaseChart){ diseaseChart.destroy(); diseaseChart=null; } }
+
+function renderCharts(){
+  const gh = get('filterGH').value.trim();
+  if(!gh){ alert('Select greenhouse for charts'); return; }
+  const rows = data.filter(r => String(r.greenhouse).toLowerCase() === gh.toLowerCase()).sort((a,b)=>{
+    const A = parseInt(String(a.weekRange || '').split('-')[0]) || 0;
+    const B = parseInt(String(b.weekRange || '').split('-')[0]) || 0;
+    return A-B;
+  });
+  const labels = rows.map(r=>r.weekRange);
+  const pestRates = rows.map(r=>Number(r.pestRate)||0);
+  const diseaseRates = rows.map(r=>Number(r.diseaseRate)||0);
+
+  destroyCharts();
+  pestChart = new Chart(document.getElementById('pestChart'), {
+    data: { labels, datasets: [{ type:'bar', label:'Pest (bar)', data:pestRates }, { type:'line', label:'Pest (line)', data:pestRates }] },
+    options: { responsive:true }
+  });
+  diseaseChart = new Chart(document.getElementById('diseaseChart'), {
+    data: { labels, datasets: [{ type:'bar', label:'Disease (bar)', data:diseaseRates }, { type:'line', label:'Disease (line)', data:diseaseRates }] },
+    options: { responsive:true }
+  });
+}
+
+function search(){
+  const q = (get('q').value||'').trim().toLowerCase();
+  document.querySelectorAll('#hist tbody tr').forEach(tr=>{
+    tr.style.display = tr.innerText.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+function clearSearch(){ get('q').value=''; search(); }
+
+async function logout(){ await fetch('/logout', { method:'POST', credentials:'same-origin' }); location.href='login.html' }
+
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login</title>
+  <style>
+    body{font-family:Arial;margin:0;height:100vh;display:flex;justify-content:center;align-items:center;background:#eef5f1}
+    .card{background:#fff;padding:24px;border-radius:12px;width:320px;box-shadow:0 4px 30px rgba(0,0,0,.08)}
+    input,button{width:100%;padding:10px;margin:6px 0;border-radius:8px;border:1px solid #ddd;box-sizing:border-box}
+    button{background:#138a36;color:#fff;border:0;cursor:pointer}
+    a{color:#138a36;text-decoration:none}
+    #msg{color:#d33}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Login</h2>
+    <input id="username" placeholder="Username" type="text" autocomplete="username">
+    <input id="password" placeholder="Password" type="password" autocomplete="current-password">
+    <button onclick="login()">Login</button>
+    <p><a href="register.html">Create Account</a></p>
+    <p id="msg"></p>
+  </div>
+
+<script>
+async function login(){
+  const username=document.getElementById('username').value.trim();
+  const password=document.getElementById('password').value;
+  const res=await fetch('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});
+  const data=await res.json();
+  if(!data.success){document.getElementById('msg').innerText=data.message||'Login failed';return;}
+  if(data.role==='Viewer') location.href='viewer.html';
+  else if(data.role==='Supervisor') location.href='supervisor.html';
+  else location.href='agronomist.html';
+}
+</script>
+</body>
+</html>
