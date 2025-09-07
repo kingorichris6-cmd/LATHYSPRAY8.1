@@ -6,42 +6,138 @@
   <link rel="icon" type="image/png" href="https://www.lathyflora.com/_next/image?url=https%3A%2F%2Fcdn.sanity.io%2Fimages%2Fjiznfzry%2Fproduction%2F42e3db94edca8d3be3981c6b1155aeef1b527a09-476x476.png&w=256&q=75">
   <link rel="apple-touch-icon" href="https://www.lathyflora.com/_next/image?url=https%3A%2F%2Fcdn.sanity.io%2Fimages%2Fjiznfzry%2Fproduction%2F42e3db94edca8d3be3981c6b1155aeef1b527a09-476x476.png&w=256&q=75">
   <style>
-    body{font-family:Arial;margin:0;height:100vh;display:flex;justify-content:center;align-items:center;background:#eef5f1}
-    .card{background:#fff;padding:24px;border-radius:12px;box-shadow:0 4px 30px rgba(0,0,0,.08);width:360px}
-    .links{display:grid;gap:10px;margin-top:12px}
-    a{display:block;padding:10px 12px;border-radius:8px;background:#138a36;color:#fff;text-decoration:none}
-    a:hover{background:#0f6d2d}
-    .top{display:flex;justify-content:space-between;align-items:center}
-    button{background:#444;color:#fff;border:0;border-radius:8px;padding:8px 10px;cursor:pointer}
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+
+      /* Background */
+      background-image: url("https://www.lathyflora.com/_next/image?url=https%3A%2F%2Fcdn.sanity.io%2Fimages%2Fjiznfzry%2Fproduction%2F0f2ab69a01c6cf4cecaa179554822d3f1416b66b-1879x1879.png&w=1080&q=75");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    .content {
+      flex: 1; /* pushes footer to bottom */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .card {
+      background: #fff;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 30px rgba(0,0,0,.08);
+      width: 360px;
+    }
+    .links {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    /* Dashboard buttons */
+    .links a {
+      display: block;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: #138a36;
+      color: #fff;
+      text-decoration: none;
+    }
+    .links a:hover {
+      background: #138a36;
+    }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    button {
+      background: #444;
+      color: #fff;
+      border: 0;
+      border-radius: 8px;
+      padding: 8px 10px;
+      cursor: pointer;
+    }
+
+    /* Footer */
+    .footer {
+      background: #1e293b;
+      color: #f1f5f9;
+      padding: 10px 20px;
+      font-size: 0.85em;
+      text-align: center;
+    }
+    /* Footer links reset — NO button look */
+    .footer a {
+      color: #f1f5f9;
+      text-decoration: none;
+      font-weight: normal;
+      background: none;
+      padding: 0;
+      display: inline;
+    }
+    .footer a:hover {
+      color: #38bdf8;
+    }
+    .footer .copyright {
+      margin-top: 6px;
+      font-size: 0.75em;
+      color: #94a3b8;
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <div class="top">
-      <h3 style="margin:0">Lathyflora Spray App</h3>
-      <button onclick="logout()">Logout</button>
-    </div>
-    <div id="roleBox" style="margin-top:6px;color:#555"></div>
-    <div class="links" style="margin-top:16px">
-      <a href="viewer.html">Viewer Dashboard</a>
-      <a href="supervisor.html">Supervisor Dashboard</a>
-      <a href="agronomist.html">Agronomist Dashboard</a>
-      <a href="farmreport.html">Farm Report</a>
-      <a href="login.html">Login</a>
-      <a href="register.html">Create Account</a>
+  <div class="content">
+    <div class="card">
+      <div class="top">
+        <h3 style="margin:0">Lathyflora Spray App</h3>
+        <button onclick="logout()">Logout</button>
+      </div>
+      <div id="roleBox" style="margin-top:6px;color:#555"></div>
+      <div class="links" style="margin-top:16px">
+        <a href="viewer.html">Viewer Dashboard</a>
+        <a href="supervisor.html">Supervisor Dashboard</a>
+        <a href="agronomist.html">Agronomist Dashboard</a>
+        <a href="farmreport.html">Farm Report</a>
+        <a href="login.html">Login</a>
+        <a href="register.html">Create Account</a>
+      </div>
     </div>
   </div>
-<script>
-  async function logout(){
-    await fetch('/logout',{method:'POST'});
-    location.href='login.html';
-  }
-  (async ()=>{
-    try{
-      const r=await fetch('/check-session'); const d=await r.json();
-      if(d.loggedIn) document.getElementById('roleBox').innerText = `Logged in as: ${d.role}`;
-    }catch{}
-  })();
-</script>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p><strong>Contact support</strong></p>
+    <p>
+      <a href="https://mail.google.com/mail/?view=cm&fs=1&to=kingorichris6@gmail.com" target="_blank">
+  kingorichris6@gmail.com
+      </a> |
+      Phone: <a href="tel:+254746252471">+254 746 252 471</a> |
+      <a href="https://wa.me/254746252471" target="_blank">WhatsApp Chat</a>
+    </p>
+    <p>Developer: Chris Kingori</p>
+    <p class="copyright">&copy; 2025 Lathyflora Spray App. All rights reserved.</p>
+  </footer>
+
+  <script>
+    async function logout(){
+      await fetch('/logout',{method:'POST'});
+      location.href='login.html';
+    }
+    (async ()=>{
+      try{
+        const r=await fetch('/check-session'); 
+        const d=await r.json();
+        if(d.loggedIn) document.getElementById('roleBox').innerText = `Logged in as: ${d.role}`;
+      }catch{}
+    })();
+  </script>
 </body>
 </html>
+

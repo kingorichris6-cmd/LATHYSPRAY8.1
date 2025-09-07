@@ -1,0 +1,15 @@
+[
+  {
+    "year": "2025",
+    "weekRange": "1",
+    "farm": "7",
+    "greenhouse": "1",
+    "bed": "all",
+    "crop": "all",
+    "variety": "red rose",
+    "pest": "aphids",
+    "disease": "blackspot",
+    "pestRate": 200,
+    "diseaseRate": 300
+  }
+]

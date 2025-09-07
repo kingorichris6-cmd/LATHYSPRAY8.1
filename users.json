@@ -1,26 +1,34 @@
 [
   {
     "id": 1,
-    "username": "chris55",
-    "password": "12345",
+    "username": "chris11",
+    "password": "1234",
     "role": "Agronomist",
     "payrollNumber": "A1001",
-    "createdAt": "2025-08-25T09:46:37.490Z"
+    "createdAt": "2025-09-06T15:32:54.919Z"
   },
   {
     "id": 2,
-    "username": "chris66",
+    "username": "chris12",
     "password": "1234",
-    "role": "GeneralManager",
-    "payrollNumber": "G9001",
-    "createdAt": "2025-08-25T09:47:30.164Z"
+    "role": "Viewer",
+    "payrollNumber": "V4002",
+    "createdAt": "2025-09-07T08:37:17.432Z"
   },
   {
     "id": 3,
-    "username": "chris57",
+    "username": "chris13",
     "password": "1234",
-    "role": "Viewer",
-    "payrollNumber": "V3001",
-    "createdAt": "2025-08-25T10:29:44.828Z"
+    "role": "Supervisor",
+    "payrollNumber": "S2001",
+    "createdAt": "2025-09-07T08:38:32.310Z"
+  },
+  {
+    "id": 4,
+    "username": "chris14",
+    "password": "1234",
+    "role": "GeneralManager",
+    "payrollNumber": "G9001",
+    "createdAt": "2025-09-07T08:40:55.624Z"
   }
 ]

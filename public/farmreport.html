@@ -4,7 +4,18 @@
   <meta charset="utf-8"/>
   <title>Farm Report</title>
   <style>
-    body { font-family: Arial; background:#f4fbff; margin:0; padding:16px; }
+    body {
+  font-family: Arial;
+  margin: 0;
+  padding: 16px;
+
+  /* Background image */
+  background-image: url("https://www.lathyflora.com/_next/image?url=https%3A%2F%2Fcdn.sanity.io%2Fimages%2Fjiznfzry%2Fproduction%2F6f4485d8380140bb94b1fb78339858525bc3d21c-2048x1365.jpg&w=3840&q=75");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
     .topbar { display:flex; gap:10px; align-items:center; }
     .topbar a, .topbar button { padding:8px 10px; border-radius:8px; border:0; cursor:pointer; background:#138a36; color:#fff; text-decoration:none }
     .card { background:#fff; border:1px solid #e7eef5; border-radius:12px; padding:12px; margin:12px 0; }
@@ -12,8 +23,27 @@
     .table-wrap { overflow:auto; border:1px solid #e7eef5; border-radius:8px; background:#fff; margin-top:12px; }
     table { width:100%; border-collapse: collapse; }
     th, td { border:1px solid #e6e6e6; padding:6px; }
-    th { background:#d7efff; }
+    .table-wrap {
+  overflow-y: auto;       /* allow vertical scrolling */
+  max-height: 400px;      /* must set a height for sticky to work */
+  border: 1px solid #e7eef5;
+  border-radius: 8px;
+  background: #fff;
+  margin-top: 12px;
+}
+
+th {
+  background: #d7efff;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
     canvas { max-width:100%; }
+    mark { background: #ffef88; }
+    .small { font-size:12px; color:#666; }
+    .filters-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .number-input { width:110px; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
@@ -30,7 +60,6 @@
 
   <div class="card">
     <div class="grid">
-      <!-- ADDED: year field (first) -->
       <input id="year" list="dl_year" placeholder="Year (e.g., 2025)">
       <input id="weekRange" list="dl_week" placeholder="Week Range (e.g. 1-4)">
       <input id="farm" list="dl_farm" placeholder="Farm">
@@ -49,6 +78,8 @@
         <input id="q" placeholder="Search history...">
         <button onclick="search()">Search</button>
         <button onclick="clearSearch()">Clear</button>
+        <!-- Export all rows to Excel -->
+        <button onclick="exportAllExcel()">Export Excel</button>
       </div>
     </div>
   </div>
@@ -65,7 +96,13 @@
 
   <div class="card">
     <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px;">
+      <input id="filterYear" list="dl_year" placeholder="Year for charts">
+      <input id="filterFarm" list="dl_farm" placeholder="Farm for charts">
       <input id="filterGH" list="dl_gh" placeholder="Greenhouse for charts">
+      <input id="filterPest" list="dl_pest" placeholder="Pest for charts">
+      <input id="filterDisease" list="dl_dis" placeholder="Disease for charts">
+      <input id="filterWeekFrom" type="number" placeholder="Week From" class="number-input">
+      <input id="filterWeekTo" type="number" placeholder="Week To" class="number-input">
       <button onclick="renderCharts()">Draw Charts</button>
     </div>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
@@ -76,11 +113,31 @@
 
   <div class="card table-wrap">
     <h3>Historical Data</h3>
+    <div style="margin-bottom:10px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+      <input id="s_year" list="dl_year" placeholder="Year">
+      <input id="s_weekFrom" type="number" class="number-input" placeholder="Week From">
+      <input id="s_weekTo" type="number" class="number-input" placeholder="Week To">
+      <input id="s_farm" list="dl_farm" placeholder="Farm">
+      <input id="s_greenhouse" list="dl_gh" placeholder="Greenhouse">
+      <input id="s_bed" list="dl_bed" placeholder="Bed">
+      <input id="s_crop" list="dl_crop" placeholder="Crop">
+      <input id="s_variety" list="dl_variety" placeholder="Variety">
+      <input id="s_pest" list="dl_pest" placeholder="Pest">
+      <input id="s_disease" list="dl_dis" placeholder="Disease">
+      <input id="s_pestRateMin" type="number" step="0.01" placeholder="Pest Rate Min">
+      <input id="s_pestRateMax" type="number" step="0.01" placeholder="Pest Rate Max">
+      <input id="s_diseaseRateMin" type="number" step="0.01" placeholder="Disease Rate Min">
+      <input id="s_diseaseRateMax" type="number" step="0.01" placeholder="Disease Rate Max">
+      <button onclick="search()">Apply Filters</button>
+      <button onclick="clearFilters()">Clear Filters</button>
+      <button onclick="exportFilteredExcel()">Export Filtered Excel</button>
+    </div>
+
     <table id="hist">
       <thead>
         <tr>
           <th>ID</th><th>Year</th><th>Week Range</th><th>Farm</th><th>Greenhouse</th><th>Bed</th><th>Crop</th><th>Variety</th>
-          <th>Pest</th><th>Disease</th><th>Pest Rate</th><th>Disease Rate</th><th>Created At</th>
+          <th>Pest</th><th>Disease</th><th>Pest Rate</th><th>Disease Rate</th><th>Created At (GMT)</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -89,9 +146,20 @@
 
 <script>
 let data = [];
+let displayRows = [];
 let pestChart, diseaseChart;
 
-const get = id => document.getElementById(id);
+const $ = id => document.getElementById(id);
+function escapeHtml(s){ return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+// Format timestamp (ISO) to Kenya time for display
+function fmtCreatedAt(ts){
+  if(!ts) return '';
+  try {
+    return new Date(ts).toLocaleString('en-KE', { dateStyle:'short', timeStyle:'short', timeZone:'Africa/Nairobi', timeZoneName:'short' });
+  } catch(e){
+    return ts;
+  }
+}
 
 async function load(){
   try{
@@ -101,32 +169,39 @@ async function load(){
       return;
     }
     data = await res.json();
-    renderTable();
+    // ensure createdAt present for each row (client-side safety)
+    data.forEach(r => { if(!r.createdAt) r.createdAt = new Date().toISOString(); });
+    displayRows = data.slice();
+    renderTable(displayRows);
     buildDatalists();
+    restoreFiltersFromURL();
+    // if URL had filters, run search
+    const params = new URLSearchParams(location.search);
+    if ([...params.keys()].length) {
+      if (params.has('year') || params.has('weekFrom') || params.has('weekTo') || params.has('farm') || params.has('greenhouse') || params.has('crop')) {
+        await search();
+      }
+    }
   }catch(err){ console.error(err); alert('Load failed'); }
 }
 
-function renderTable(){
-  const tb = document.querySelector('#hist tbody');
-  tb.innerHTML = data.map(r => `<tr>
-    <td>${r.id||''}</td>
-    <td>${r.year||''}</td>
-    <td>${r.weekRange||''}</td>
-    <td>${r.farm||''}</td>
-    <td>${r.greenhouse||''}</td>
-    <td>${r.bed||''}</td>
-    <td>${r.crop||''}</td>
-    <td>${r.variety||''}</td>
-    <td>${r.pest||''}</td>
-    <td>${r.disease||''}</td>
-    <td>${r.pestRate||0}</td>
-    <td>${r.diseaseRate||0}</td>
-    <td>${r.createdAt||''}</td>
-  </tr>`).join('');
+function unique(arr, key){
+  const s = new Set();
+  arr.forEach(x => { if(x && x[key] !== undefined && x[key] !== null && String(x[key]).trim() !== '') s.add(String(x[key])); });
+  return Array.from(s).sort();
 }
-
-function unique(arr, key){ const s=new Set(); arr.forEach(x=>{ if(x && x[key]) s.add(String(x[key])); }); return [...s].sort(); }
-function fillDL(id, vals){ const dl=document.getElementById(id); const have=new Set([...dl.children].map(o=>o.value)); vals.forEach(v=>{ if(!have.has(v)){ const o=document.createElement('option'); o.value=v; dl.appendChild(o);} }); }
+function fillDL(id, vals){
+  const dl = $(id);
+  if(!dl) return;
+  const existing = new Set(Array.from(dl.children).map(o => o.value));
+  vals.forEach(v => {
+    if(!existing.has(v)){
+      const opt = document.createElement('option');
+      opt.value = v;
+      dl.appendChild(opt);
+    }
+  });
+}
 function buildDatalists(){
   fillDL('dl_year', unique(data,'year'));
   fillDL('dl_week', unique(data,'weekRange'));
@@ -139,19 +214,53 @@ function buildDatalists(){
   fillDL('dl_dis', unique(data,'disease'));
 }
 
+function renderTable(rows){
+  const tbody = document.querySelector('#hist tbody');
+  const q = ($('q').value || '').trim().toLowerCase();
+  tbody.innerHTML = rows.map(r => {
+    function cell(v){
+      const text = v === undefined || v === null ? '' : String(v);
+      if(q){
+        const escText = escapeHtml(text);
+        try {
+          const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'gi');
+          return escText.replace(re, m => `<mark>${m}</mark>`);
+        } catch(e) { return escText; }
+      } else {
+        return escapeHtml(text);
+      }
+    }
+    return `<tr>
+      <td>${cell(r.id)}</td>
+      <td>${cell(r.year)}</td>
+      <td>${cell(r.weekRange)}</td>
+      <td>${cell(r.farm)}</td>
+      <td>${cell(r.greenhouse)}</td>
+      <td>${cell(r.bed)}</td>
+      <td>${cell(r.crop)}</td>
+      <td>${cell(r.variety)}</td>
+      <td>${cell(r.pest)}</td>
+      <td>${cell(r.disease)}</td>
+      <td>${cell(r.pestRate)}</td>
+      <td>${cell(r.diseaseRate)}</td>
+      <td>${escapeHtml(fmtCreatedAt(r.createdAt))}</td>
+    </tr>`;
+  }).join('');
+}
+
 async function addEntry(){
   const payload = {
-    year: get('year').value.trim(),                 // ADDED: send year
-    weekRange: get('weekRange').value.trim(),
-    farm: get('farm').value.trim(),
-    greenhouse: get('greenhouse').value.trim(),
-    bed: get('bed').value.trim(),
-    crop: get('crop').value.trim(),
-    variety: get('variety').value.trim(),
-    pest: get('pest').value.trim(),
-    disease: get('disease').value.trim(),
-    pestRate: Number(get('pestRate').value)||0,
-    diseaseRate: Number(get('diseaseRate').value)||0
+    year: $('year').value.trim(),
+    weekRange: $('weekRange').value.trim(),
+    farm: $('farm').value.trim(),
+    greenhouse: $('greenhouse').value.trim(),
+    bed: $('bed').value.trim(),
+    crop: $('crop').value.trim(),
+    variety: $('variety').value.trim(),
+    pest: $('pest').value.trim(),
+    disease: $('disease').value.trim(),
+    pestRate: Number($('pestRate').value)||0,
+    diseaseRate: Number($('diseaseRate').value)||0
   };
   if(!payload.weekRange || !payload.farm || !payload.greenhouse){ alert('Week range, farm and greenhouse required'); return; }
   try{
@@ -163,44 +272,198 @@ async function addEntry(){
     });
     const d = await res.json();
     if (!d.success) { alert('Save failed'); return; }
-    // clear (including year)
-    ['year','weekRange','farm','greenhouse','bed','crop','variety','pest','disease','pestRate','diseaseRate'].forEach(id=>get(id).value='');
+    ['year','weekRange','farm','greenhouse','bed','crop','variety','pest','disease','pestRate','diseaseRate'].forEach(id=>{ if($(id)) $(id).value=''; });
     await load();
   }catch(err){ console.error(err); alert('Save failed'); }
 }
 
-function destroyCharts(){ if(pestChart){ pestChart.destroy(); pestChart=null; } if(diseaseChart){ diseaseChart.destroy(); diseaseChart=null; } }
+function gatherSearchParams(){
+  const params = new URLSearchParams();
+  const s_year = $('s_year').value.trim();
+  const s_weekFrom = $('s_weekFrom').value.trim();
+  const s_weekTo = $('s_weekTo').value.trim();
+  const s_farm = $('s_farm').value.trim();
+  const s_greenhouse = $('s_greenhouse').value.trim();
+  const s_bed = $('s_bed').value.trim();
+  const s_crop = $('s_crop').value.trim();
+  const s_variety = $('s_variety').value.trim();
+  const s_pest = $('s_pest').value.trim();
+  const s_disease = $('s_disease').value.trim();
+  const s_pestRateMin = $('s_pestRateMin').value.trim();
+  const s_pestRateMax = $('s_pestRateMax').value.trim();
+  const s_diseaseRateMin = $('s_diseaseRateMin').value.trim();
+  const s_diseaseRateMax = $('s_diseaseRateMax').value.trim();
 
-function renderCharts(){
-  const gh = get('filterGH').value.trim();
-  if(!gh){ alert('Select greenhouse for charts'); return; }
-  const rows = data.filter(r => String(r.greenhouse).toLowerCase() === gh.toLowerCase()).sort((a,b)=>{
-    const A = parseInt(String(a.weekRange || '').split('-')[0]) || 0;
-    const B = parseInt(String(b.weekRange || '').split('-')[0]) || 0;
-    return A-B;
-  });
-  const labels = rows.map(r=>r.weekRange);
-  const pestRates = rows.map(r=>Number(r.pestRate)||0);
-  const diseaseRates = rows.map(r=>Number(r.diseaseRate)||0);
+  if(s_year) params.set('year', s_year);
+  if(s_weekFrom) params.set('weekFrom', s_weekFrom);
+  if(s_weekTo) params.set('weekTo', s_weekTo);
+  if(s_farm) params.set('farm', s_farm);
+  if(s_greenhouse) params.set('greenhouse', s_greenhouse);
+  if(s_bed) params.set('bed', s_bed);
+  if(s_crop) params.set('crop', s_crop);
+  if(s_variety) params.set('variety', s_variety);
+  if(s_pest) params.set('pest', s_pest);
+  if(s_disease) params.set('disease', s_disease);
+  if(s_pestRateMin) params.set('pestRateMin', s_pestRateMin);
+  if(s_pestRateMax) params.set('pestRateMax', s_pestRateMax);
+  if(s_diseaseRateMin) params.set('diseaseRateMin', s_diseaseRateMin);
+  if(s_diseaseRateMax) params.set('diseaseRateMax', s_diseaseRateMax);
 
-  destroyCharts();
-  pestChart = new Chart(document.getElementById('pestChart'), {
-    data: { labels, datasets: [{ type:'bar', label:'Pest (bar)', data:pestRates }, { type:'line', label:'Pest (line)', data:pestRates }] },
-    options: { responsive:true }
-  });
-  diseaseChart = new Chart(document.getElementById('diseaseChart'), {
-    data: { labels, datasets: [{ type:'bar', label:'Disease (bar)', data:diseaseRates }, { type:'line', label:'Disease (line)', data:diseaseRates }] },
-    options: { responsive:true }
-  });
+  return params;
 }
 
-function search(){
-  const q = (get('q').value||'').trim().toLowerCase();
-  document.querySelectorAll('#hist tbody tr').forEach(tr=>{
-    tr.style.display = tr.innerText.toLowerCase().includes(q) ? '' : 'none';
-  });
+async function search(){
+  try{
+    const params = gatherSearchParams();
+    const url = '/farmreport/search?' + params.toString();
+    const res = await fetch(url, { credentials: 'same-origin' });
+    if(!res.ok){ alert('Search failed'); return; }
+    let rows = await res.json();
+    const q = ($('q').value || '').trim().toLowerCase();
+    if(q){
+      rows = rows.filter(r => JSON.stringify(r).toLowerCase().includes(q));
+    }
+    displayRows = rows;
+    renderTable(displayRows);
+    updateURLFiltersFromSearchParams(params);
+  }catch(err){ console.error(err); alert('Search failed'); }
 }
-function clearSearch(){ get('q').value=''; search(); }
+
+function clearSearch(){ $('q').value=''; renderTable(displayRows || data); }
+
+function clearFilters(){
+  ['s_year','s_weekFrom','s_weekTo','s_farm','s_greenhouse','s_bed','s_crop','s_variety','s_pest','s_disease','s_pestRateMin','s_pestRateMax','s_diseaseRateMin','s_diseaseRateMax'].forEach(id=>{ if($(id)) $(id).value=''; });
+  history.replaceState(null, '', window.location.pathname);
+  displayRows = data.slice();
+  renderTable(displayRows);
+}
+
+// Export all (unfiltered) using server endpoint
+function exportAllExcel(){
+  // simple anchor navigation to download (cookies included)
+  const a = document.createElement('a');
+  a.href = '/farmreport/export';
+  a.target = '_self';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+// Export filtered (based on search filters)
+function exportFilteredExcel(){
+  const params = gatherSearchParams();
+  const url = '/farmreport/export?' + params.toString();
+  const a = document.createElement('a');
+  a.href = url;
+  a.target = '_self';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+async function renderCharts(){
+  try{
+    const yr = $('filterYear').value.trim();
+    const farm = $('filterFarm').value.trim();
+    const gh = $('filterGH').value.trim();
+    const pest = $('filterPest').value.trim();
+    const disease = $('filterDisease').value.trim();
+    const weekFrom = parseInt($('filterWeekFrom').value) || null;
+    const weekTo = parseInt($('filterWeekTo').value) || null;
+
+    if(!yr && !farm && !gh && !pest && !disease){ alert('Please supply at least one filter (Year / Farm / Greenhouse / Pest / Disease) for charts'); return; }
+
+    const params = new URLSearchParams();
+    if(yr) params.set('year', yr);
+    if(farm) params.set('farm', farm);
+    if(gh) params.set('greenhouse', gh);
+    if(pest) params.set('pest', pest);
+    if(disease) params.set('disease', disease);
+
+    const res = await fetch('/farmreport/charts?' + params.toString(), { credentials: 'same-origin' });
+    if(!res.ok){ alert('Chart fetch failed'); return; }
+    let rows = await res.json();
+
+    if(weekFrom !== null || weekTo !== null){
+      rows = rows.filter(r => {
+        const wkStart = parseInt((r.weekRange||'').split('-')[0]) || NaN;
+        if(isNaN(wkStart)) return false;
+        if(weekFrom !== null && wkStart < weekFrom) return false;
+        if(weekTo !== null && wkStart > weekTo) return false;
+        return true;
+      });
+    }
+
+    rows.sort((a,b) => {
+      const A = parseInt((a.weekRange||'').split('-')[0])||0;
+      const B = parseInt((b.weekRange||'').split('-')[0])||0;
+      return A-B;
+    });
+
+    const labels = rows.map(r=>r.weekRange);
+    const pestRates = rows.map(r=>Number(r.pestRate)||0);
+    const diseaseRates = rows.map(r=>Number(r.diseaseRate)||0);
+
+    if(pestChart){ pestChart.destroy(); pestChart = null; }
+    if(diseaseChart){ diseaseChart.destroy(); diseaseChart = null; }
+
+    pestChart = new Chart(document.getElementById('pestChart'), {
+      data: { labels, datasets: [{ type:'bar', label:'Pest (bar)', data:pestRates }, { type:'line', label:'Pest (line)', data:pestRates }] },
+      options: { responsive:true }
+    });
+    diseaseChart = new Chart(document.getElementById('diseaseChart'), {
+      data: { labels, datasets: [{ type:'bar', label:'Disease (bar)', data:diseaseRates }, { type:'line', label:'Disease (line)', data:diseaseRates }] },
+      options: { responsive:true }
+    });
+
+    // persist filters for sharing
+    const urlParams = new URLSearchParams(location.search);
+    if($('filterYear').value) urlParams.set('year', $('filterYear').value); else urlParams.delete('year');
+    if($('filterFarm').value) urlParams.set('farm', $('filterFarm').value); else urlParams.delete('farm');
+    if($('filterGH').value) urlParams.set('greenhouse', $('filterGH').value); else urlParams.delete('greenhouse');
+    if($('filterPest').value) urlParams.set('pest', $('filterPest').value); else urlParams.delete('pest');
+    if($('filterDisease').value) urlParams.set('disease', $('filterDisease').value); else urlParams.delete('disease');
+    if($('filterWeekFrom').value) urlParams.set('weekFrom', $('filterWeekFrom').value); else urlParams.delete('weekFrom');
+    if($('filterWeekTo').value) urlParams.set('weekTo', $('filterWeekTo').value); else urlParams.delete('weekTo');
+    history.replaceState(null, '', window.location.pathname + (urlParams.toString() ? ('?' + urlParams.toString()) : ''));
+
+  }catch(err){ console.error(err); alert('Draw charts failed'); }
+}
+
+function updateURLFiltersFromSearchParams(params){
+  const urlParams = new URLSearchParams(location.search);
+  ['year','weekFrom','weekTo','farm','greenhouse','bed','crop','variety','pest','disease','pestRateMin','pestRateMax','diseaseRateMin','diseaseRateMax','q'].forEach(k=>urlParams.delete(k));
+  for(const [k,v] of params.entries()) urlParams.set(k,v);
+  // also include q (search box) so shared links include the q string
+  if($('q') && $('q').value) urlParams.set('q',$('q').value);
+  history.replaceState(null,'', window.location.pathname + (urlParams.toString()?('?'+urlParams.toString()):''));
+}
+
+function restoreFiltersFromURL(){
+  const params = new URLSearchParams(location.search);
+  if(params.get('year')) $('s_year').value = params.get('year');
+  if(params.get('weekFrom')) $('s_weekFrom').value = params.get('weekFrom');
+  if(params.get('weekTo')) $('s_weekTo').value = params.get('weekTo');
+  if(params.get('farm')) $('s_farm').value = params.get('farm');
+  if(params.get('greenhouse')) $('s_greenhouse').value = params.get('greenhouse');
+  if(params.get('bed')) $('s_bed').value = params.get('bed');
+  if(params.get('crop')) $('s_crop').value = params.get('crop');
+  if(params.get('variety')) $('s_variety').value = params.get('variety');
+  if(params.get('pest')) $('s_pest').value = params.get('pest');
+  if(params.get('disease')) $('s_disease').value = params.get('disease');
+  if(params.get('pestRateMin')) $('s_pestRateMin').value = params.get('pestRateMin');
+  if(params.get('pestRateMax')) $('s_pestRateMax').value = params.get('pestRateMax');
+  if(params.get('diseaseRateMin')) $('s_diseaseRateMin').value = params.get('diseaseRateMin');
+  if(params.get('diseaseRateMax')) $('s_diseaseRateMax').value = params.get('diseaseRateMax');
+  if(params.get('year')) $('filterYear').value = params.get('year');
+  if(params.get('farm')) $('filterFarm').value = params.get('farm');
+  if(params.get('greenhouse')) $('filterGH').value = params.get('greenhouse');
+  if(params.get('pest')) $('filterPest').value = params.get('pest');
+  if(params.get('disease')) $('filterDisease').value = params.get('disease');
+  if(params.get('weekFrom')) $('filterWeekFrom').value = params.get('weekFrom');
+  if(params.get('weekTo')) $('filterWeekTo').value = params.get('weekTo');
+  if(params.get('q')) $('q').value = params.get('q');
+}
 
 async function logout(){ await fetch('/logout', { method:'POST', credentials:'same-origin' }); location.href='login.html' }
 

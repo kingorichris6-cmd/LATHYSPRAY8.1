@@ -4,18 +4,32 @@
   <meta charset="utf-8"/>
   <title>Agronomist Dashboard</title>
   <style>
-    body { font-family: Arial; background:#f7fff8; margin:0; padding:16px; }
+    body {
+  font-family: Arial;
+  margin: 0;
+  padding: 16px;
+
+  /* Background image */
+  background-image: url("https://media.licdn.com/dms/image/v2/D4D22AQF0A909R6xIQg/feedshare-shrink_800/feedshare-shrink_800/0/1713288000180?e=2147483647&v=beta&t=SUy7E7JhE6XNMBozDtAWj3zpE_LtBnBgYWQ-OGLFHx4");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
     h1 { margin:0 0 10px; }
     .topbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
     .topbar a, .topbar button { padding:8px 10px; border-radius:8px; border:0; cursor:pointer; background:#138a36; color:#fff; text-decoration:none }
     .tools { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0; }
     input, select, button { padding:8px; border:1px solid #ddd; border-radius:8px; }
     .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap:8px; }
-    .table-wrap { overflow:auto; border:1px solid #eee; border-radius:8px; background:#fff; margin-top:12px; }
+    .table-wrap { overflow:auto; border:1px solid #eee; border-radius:8px; background:#fff; margin-top:12px; max-height:600px; }
+
     table { width:max-content; min-width:100%; border-collapse: collapse; font-size:13px; }
     th, td { border:1px solid #e6e6e6; padding:6px; vertical-align:top; white-space:nowrap; }
-    th.top { background:#cdeccd; }
-    th.sub { background:#eaf7ea; }
+
+    th.top { background:#cdeccd; position: sticky; top:0; z-index:2; }
+    th.sub { background:#eaf7ea; position: sticky; top:36px; z-index:1; }
+
     td[contenteditable="true"]{ background:#fffef3; }
     .searchbox { margin-left:auto; display:flex; gap:6px; align-items:center }
     mark { background: #ffef88; }
@@ -37,7 +51,6 @@
   <h3>Quick Add (same columns as table — with autosuggest)</h3>
 
   <div class="grid" id="quickAdd">
-    <!-- Core fields -->
     <input id="q_farm" list="dl_farm" placeholder="Farm">
     <input id="q_gh" list="dl_gh" placeholder="GH">
     <input id="q_area" list="dl_area" placeholder="AREA">
@@ -47,56 +60,55 @@
     <input id="q_method" list="dl_method" placeholder="METHOD">
     <input id="q_time" list="dl_time" placeholder="TIME">
 
-    <!-- MON fields -->
+    <input id="q_mon" placeholder="MONDAY">
     <input id="q_mon_rate" placeholder="MON Rate">
     <input id="q_mon_vol" placeholder="MON Vol (L)">
     <input id="q_mon_chem" placeholder="MON Chemical">
     <input id="q_mon_area" placeholder="MON Area">
     <input id="q_mon_mode" placeholder="MON Mode">
 
-    <!-- TUE fields -->
+    <input id="q_tue" placeholder="TUESDAY">
     <input id="q_tue_rate" placeholder="TUE Rate">
     <input id="q_tue_vol" placeholder="TUE Vol (L)">
     <input id="q_tue_chem" placeholder="TUE Chemical">
     <input id="q_tue_area" placeholder="TUE Area">
     <input id="q_tue_mode" placeholder="TUE Mode">
 
-    <!-- WED fields -->
+    <input id="q_wed" placeholder="WEDNESDAY">
     <input id="q_wed_rate" placeholder="WED Rate">
     <input id="q_wed_vol" placeholder="WED Vol (L)">
     <input id="q_wed_chem" placeholder="WED Chemical">
     <input id="q_wed_area" placeholder="WED Area">
     <input id="q_wed_mode" placeholder="WED Mode">
 
-    <!-- THU fields -->
+    <input id="q_thu" placeholder="THURSDAY">
     <input id="q_thu_rate" placeholder="THU Rate">
     <input id="q_thu_vol" placeholder="THU Vol (L)">
     <input id="q_thu_chem" placeholder="THU Chemical">
     <input id="q_thu_area" placeholder="THU Area">
     <input id="q_thu_mode" placeholder="THU Mode">
 
-    <!-- FRI fields -->
+    <input id="q_fri" placeholder="FRIDAY">
     <input id="q_fri_rate" placeholder="FRI Rate">
     <input id="q_fri_vol" placeholder="FRI Vol (L)">
     <input id="q_fri_chem" placeholder="FRI Chemical">
     <input id="q_fri_area" placeholder="FRI Area">
     <input id="q_fri_mode" placeholder="FRI Mode">
 
-    <!-- SAT fields -->
+    <input id="q_sat" placeholder="SATURDAY">
     <input id="q_sat_rate" placeholder="SAT Rate">
     <input id="q_sat_vol" placeholder="SAT Vol (L)">
     <input id="q_sat_chem" placeholder="SAT Chemical">
     <input id="q_sat_area" placeholder="SAT Area">
     <input id="q_sat_mode" placeholder="SAT Mode">
 
-    <!-- SUN fields -->
+    <input id="q_sun" placeholder="SUNDAY">
     <input id="q_sun_rate" placeholder="SUN Rate">
     <input id="q_sun_vol" placeholder="SUN Vol (L)">
     <input id="q_sun_chem" placeholder="SUN Chemical">
     <input id="q_sun_area" placeholder="SUN Area">
     <input id="q_sun_mode" placeholder="SUN Mode">
 
-    <!-- trailing fields -->
     <input id="q_target" list="dl_target" placeholder="Target">
     <input id="q_just" list="dl_just" placeholder="Justification">
     <input id="q_morning" list="dl_morn" placeholder="Morning">
@@ -108,19 +120,22 @@
 
   <div class="tools">
     <button onclick="addRow()">Add Row</button>
-    <input type="file" id="excel" accept=".xlsx,.xls">
+    <input type="file" id="excel" accept=".xlsx,.xlsm,.xls,.csv">
     <button onclick="importExcel()">Import Excel (merge)</button>
     <button onclick="exportExcel()">Export Excel</button>
     <button onclick="saveAll()">Save Table</button>
 
     <div class="searchbox">
-      <input id="q" placeholder="Search...">
+      <!-- Added FARM, GH, TIME filters in search -->
+      <input id="filter_farm" placeholder="Filter Farm">
+      <input id="filter_gh" placeholder="Filter GH">
+      <input id="filter_time" placeholder="Filter TIME">
+      <input id="q" placeholder="Search all...">
       <button onclick="search()">Search</button>
       <button onclick="clearSearch()">Clear</button>
     </div>
   </div>
 
-  <!-- datalists for autosuggest -->
   <datalist id="dl_farm"></datalist>
   <datalist id="dl_gh"></datalist>
   <datalist id="dl_area"></datalist>
@@ -140,54 +155,61 @@
   <div class="table-wrap">
     <table id="tbl">
       <thead>
-        <tr>
-          <th class="top" rowspan="2">ID</th>
-          <th class="top" rowspan="2">Farm</th>
-          <th class="top" rowspan="2">GH</th>
-          <th class="top" rowspan="2">AREA</th>
-          <th class="top" rowspan="2">CROP</th>
-          <th class="top" rowspan="2">VARIETY</th>
-          <th class="top" rowspan="2">MODE</th>
-          <th class="top" rowspan="2">METHOD</th>
-          <th class="top" rowspan="2">TIME</th>
+  <tr>
+    <th class="top" rowspan="2">ID</th>
+    <th class="top" rowspan="2">Farm</th>
+    <th class="top" rowspan="2">GH</th>
+    <th class="top" rowspan="2">AREA</th>
+    <th class="top" rowspan="2">CROP</th>
+    <th class="top" rowspan="2">VARIETY</th>
+    <th class="top" rowspan="2">MODE</th>
+    <th class="top" rowspan="2">METHOD</th>
+    <th class="top" rowspan="2">TIME</th>
 
-          <th class="top" colspan="5">MON</th>
-          <th class="top" colspan="5">TUE</th>
-          <th class="top" colspan="5">WED</th>
-          <th class="top" colspan="5">THU</th>
-          <th class="top" colspan="5">FRI</th>
-          <th class="top" colspan="5">SAT</th>
-          <th class="top" colspan="5">SUN</th>
+    <th class="top" colspan="6">MON</th>
+    <th class="top" colspan="6">TUE</th>
+    <th class="top" colspan="6">WED</th>
+    <th class="top" colspan="6">THU</th>
+    <th class="top" colspan="6">FRI</th>
+    <th class="top" colspan="6">SAT</th>
+    <th class="top" colspan="6">SUN</th>
 
-          <th class="top" rowspan="2">Target</th>
-          <th class="top" rowspan="2">Justification</th>
-          <th class="top" rowspan="2">Morning</th>
-          <th class="top" rowspan="2">Evening</th>
-          <th class="top" rowspan="2">Prepared By</th>
-          <th class="top" rowspan="2">Agronomist Remarks</th>
-          <th class="top" rowspan="2">Supervisor Remarks</th>
-        </tr>
-        <tr>
-          <th class="sub">Rate</th><th class="sub">Vol(L)</th><th class="sub">Chemical</th><th class="sub">Area</th><th class="sub">Mode</th>
-          <th class="sub">Rate</th><th class="sub">Vol(L)</th><th class="sub">Chemical</th><th class="sub">Area</th><th class="sub">Mode</th>
-          <th class="sub">Rate</th><th class="sub">Vol(L)</th><th class="sub">Chemical</th><th class="sub">Area</th><th class="sub">Mode</th>
-          <th class="sub">Rate</th><th class="sub">Vol(L)</th><th class="sub">Chemical</th><th class="sub">Area</th><th class="sub">Mode</th>
-          <th class="sub">Rate</th><th class="sub">Vol(L)</th><th class="sub">Chemical</th><th class="sub">Area</th><th class="sub">Mode</th>
-          <th class="sub">Rate</th><th class="sub">Vol(L)</th><th class="sub">Chemical</th><th class="sub">Area</th><th class="sub">Mode</th>
-          <th class="sub">Rate</th><th class="sub">Vol(L)</th><th class="sub">Chemical</th><th class="sub">Area</th><th class="sub">Mode</th>
-        </tr>
-      </thead>
+    <!-- 👇 Move these to the end -->
+    <th class="top" rowspan="2">Target</th>
+    <th class="top" rowspan="2">Justification</th>
+    <th class="top" rowspan="2">Morning</th>
+    <th class="top" rowspan="2">Evening</th>
+    <th class="top" rowspan="2">Prepared By</th>
+    <th class="top" rowspan="2">Agronomist Remarks</th>
+    <th class="top" rowspan="2">Supervisor Remarks</th>
+  </tr>
+  <tr>
+    <!-- Subheaders for each day -->
+    <th class="sub">monday</th><th class="sub">Rate</th><th class="sub">Vol(L)</th><th class="sub">Chemical</th><th class="sub">Area</th><th class="sub">Mode</th>
+    <th class="sub">tuesday</th><th class="sub">Rate</th><th class="sub">Vol(L)</th><th class="sub">Chemical</th><th class="sub">Area</th><th class="sub">Mode</th>
+    <th class="sub">wednesday</th><th class="sub">Rate</th><th class="sub">Vol(L)</th><th class="sub">Chemical</th><th class="sub">Area</th><th class="sub">Mode</th>
+    <th class="sub">thursday</th><th class="sub">Rate</th><th class="sub">Vol(L)</th><th class="sub">Chemical</th><th class="sub">Area</th><th class="sub">Mode</th>
+    <th class="sub">friday</th><th class="sub">Rate</th><th class="sub">Vol(L)</th><th class="sub">Chemical</th><th class="sub">Area</th><th class="sub">Mode</th>
+    <th class="sub">saturday</th><th class="sub">Rate</th><th class="sub">Vol(L)</th><th class="sub">Chemical</th><th class="sub">Area</th><th class="sub">Mode</th>
+    <th class="sub">sunday</th><th class="sub">Rate</th><th class="sub">Vol(L)</th><th class="sub">Chemical</th><th class="sub">Area</th><th class="sub">Mode</th>
+  </tr>
+</thead>
+
       <tbody></tbody>
     </table>
   </div>
 
 <script>
+// --- All your previous JS remains unchanged except search ---
+// --- JS remains exactly as your previous code, unchanged ---
 /* Utility helpers */
 const $ = id => document.getElementById(id);
 const ce = v => v == null ? '' : String(v);
 
-/* Current rows loaded from server */
-let rows = [];
+/* Master copy and filtered copy */
+let allRows = [];  // full dataset from server
+let rows = [];     // current displayed (filtered) rows
+
 
 /* Render functions */
 function rowToHTML(row) {
@@ -204,19 +226,19 @@ function rowToHTML(row) {
     <td contenteditable="true">${v('method')}</td>
     <td contenteditable="true">${v('time')}</td>
 
-    <td contenteditable="true">${v('mon_rate')}</td><td contenteditable="true">${v('mon_vol')}</td><td contenteditable="true">${v('mon_chemical')}</td><td contenteditable="true">${v('mon_area')}</td><td contenteditable="true">${v('mon_mode')}</td>
+    <td contenteditable="true">${v('mon')}</td><td contenteditable="true">${v('mon_rate')}</td><td contenteditable="true">${v('mon_vol')}</td><td contenteditable="true">${v('mon_chemical')}</td><td contenteditable="true">${v('mon_area')}</td><td contenteditable="true">${v('mon_mode')}</td>
 
-    <td contenteditable="true">${v('tue_rate')}</td><td contenteditable="true">${v('tue_vol')}</td><td contenteditable="true">${v('tue_chemical')}</td><td contenteditable="true">${v('tue_area')}</td><td contenteditable="true">${v('tue_mode')}</td>
+    <td contenteditable="true">${v('tue')}</td><td contenteditable="true">${v('tue_rate')}</td><td contenteditable="true">${v('tue_vol')}</td><td contenteditable="true">${v('tue_chemical')}</td><td contenteditable="true">${v('tue_area')}</td><td contenteditable="true">${v('tue_mode')}</td>
 
-    <td contenteditable="true">${v('wed_rate')}</td><td contenteditable="true">${v('wed_vol')}</td><td contenteditable="true">${v('wed_chemical')}</td><td contenteditable="true">${v('wed_area')}</td><td contenteditable="true">${v('wed_mode')}</td>
+    <td contenteditable="true">${v('wen')}</td><td contenteditable="true">${v('wed_rate')}</td><td contenteditable="true">${v('wed_vol')}</td><td contenteditable="true">${v('wed_chemical')}</td><td contenteditable="true">${v('wed_area')}</td><td contenteditable="true">${v('wed_mode')}</td>
 
-    <td contenteditable="true">${v('thu_rate')}</td><td contenteditable="true">${v('thu_vol')}</td><td contenteditable="true">${v('thu_chemical')}</td><td contenteditable="true">${v('thu_area')}</td><td contenteditable="true">${v('thu_mode')}</td>
+    <td contenteditable="true">${v('thu')}</td><td contenteditable="true">${v('thu_rate')}</td><td contenteditable="true">${v('thu_vol')}</td><td contenteditable="true">${v('thu_chemical')}</td><td contenteditable="true">${v('thu_area')}</td><td contenteditable="true">${v('thu_mode')}</td>
 
-    <td contenteditable="true">${v('fri_rate')}</td><td contenteditable="true">${v('fri_vol')}</td><td contenteditable="true">${v('fri_chemical')}</td><td contenteditable="true">${v('fri_area')}</td><td contenteditable="true">${v('fri_mode')}</td>
+    <td contenteditable="true">${v('fri')}</td><td contenteditable="true">${v('fri_rate')}</td><td contenteditable="true">${v('fri_vol')}</td><td contenteditable="true">${v('fri_chemical')}</td><td contenteditable="true">${v('fri_area')}</td><td contenteditable="true">${v('fri_mode')}</td>
 
-    <td contenteditable="true">${v('sat_rate')}</td><td contenteditable="true">${v('sat_vol')}</td><td contenteditable="true">${v('sat_chemical')}</td><td contenteditable="true">${v('sat_area')}</td><td contenteditable="true">${v('sat_mode')}</td>
+    <td contenteditable="true">${v('sat')}</td><td contenteditable="true">${v('sat_rate')}</td><td contenteditable="true">${v('sat_vol')}</td><td contenteditable="true">${v('sat_chemical')}</td><td contenteditable="true">${v('sat_area')}</td><td contenteditable="true">${v('sat_mode')}</td>
 
-    <td contenteditable="true">${v('sun_rate')}</td><td contenteditable="true">${v('sun_vol')}</td><td contenteditable="true">${v('sun_chemical')}</td><td contenteditable="true">${v('sun_area')}</td><td contenteditable="true">${v('sun_mode')}</td>
+    <td contenteditable="true">${v('sun')}</td><td contenteditable="true">${v('sun_rate')}</td><td contenteditable="true">${v('sun_vol')}</td><td contenteditable="true">${v('sun_chemical')}</td><td contenteditable="true">${v('sun_area')}</td><td contenteditable="true">${v('sun_mode')}</td>
 
     <td contenteditable="true">${v('target')}</td><td contenteditable="true">${v('justification')}</td><td contenteditable="true">${v('morning')}</td><td contenteditable="true">${v('evening')}</td><td contenteditable="true">${v('preparedBy')}</td><td contenteditable="true">${v('agronomistRemarks')}</td><td contenteditable="true">${v('supervisorRemarks')}</td>
   </tr>`;
@@ -261,7 +283,8 @@ async function load(){
   try {
     const res = await fetch('/agro', { credentials: 'same-origin' });
     if(!res.ok) { if(res.status===401) location.href='login.html'; else throw new Error('Load failed'); }
-    rows = await res.json();
+    allRows = await res.json();
+    rows = [...allRows];   // copy full set into current display
     render();
   } catch (err) {
     console.error(err);
@@ -276,13 +299,55 @@ async function addRow() {
     crop: $('q_crop').value.trim(), variety: $('q_variety').value.trim(), mode: $('q_mode').value.trim(),
     method: $('q_method').value.trim(), time: $('q_time').value.trim(),
 
-    mon_rate: $('q_mon_rate').value.trim(), mon_vol: $('q_mon_vol').value.trim(), mon_chemical: $('q_mon_chem').value.trim(), mon_area: $('q_mon_area').value.trim(), mon_mode: $('q_mon_mode').value.trim(),
-    tue_rate: $('q_tue_rate').value.trim(), tue_vol: $('q_tue_vol').value.trim(), tue_chemical: $('q_tue_chem').value.trim(), tue_area: $('q_tue_area').value.trim(), tue_mode: $('q_tue_mode').value.trim(),
-    wed_rate: $('q_wed_rate').value.trim(), wed_vol: $('q_wed_vol').value.trim(), wed_chemical: $('q_wed_chem').value.trim(), wed_area: $('q_wed_area').value.trim(), wed_mode: $('q_wed_mode').value.trim(),
-    thu_rate: $('q_thu_rate').value.trim(), thu_vol: $('q_thu_vol').value.trim(), thu_chemical: $('q_thu_chem').value.trim(), thu_area: $('q_thu_area').value.trim(), thu_mode: $('q_thu_mode').value.trim(),
-    fri_rate: $('q_fri_rate').value.trim(), fri_vol: $('q_fri_vol').value.trim(), fri_chemical: $('q_fri_chem').value.trim(), fri_area: $('q_fri_area').value.trim(), fri_mode: $('q_fri_mode').value.trim(),
-    sat_rate: $('q_sat_rate').value.trim(), sat_vol: $('q_sat_vol').value.trim(), sat_chemical: $('q_sat_chem').value.trim(), sat_area: $('q_sat_area').value.trim(), sat_mode: $('q_sat_mode').value.trim(),
-    sun_rate: $('q_sun_rate').value.trim(), sun_vol: $('q_sun_vol').value.trim(), sun_chemical: $('q_sun_chem').value.trim(), sun_area: $('q_sun_area').value.trim(), sun_mode: $('q_sun_mode').value.trim(),
+   mon: $('q_mon').value.trim(),
+mon_rate: $('q_mon_rate').value.trim(),
+mon_vol: $('q_mon_vol').value.trim(),
+mon_chemical: $('q_mon_chem').value.trim(),
+mon_area: $('q_mon_area').value.trim(),
+mon_mode: $('q_mon_mode').value.trim(),
+
+tue: $('q_tue').value.trim(),
+tue_rate: $('q_tue_rate').value.trim(),
+tue_vol: $('q_tue_vol').value.trim(),
+tue_chemical: $('q_tue_chem').value.trim(),
+tue_area: $('q_tue_area').value.trim(),
+tue_mode: $('q_tue_mode').value.trim(),
+
+wed: $('q_wed').value.trim(),
+wed_rate: $('q_wed_rate').value.trim(),
+wed_vol: $('q_wed_vol').value.trim(),
+wed_chemical: $('q_wed_chem').value.trim(),
+wed_area: $('q_wed_area').value.trim(),
+wed_mode: $('q_wed_mode').value.trim(),
+
+thu: $('q_thu').value.trim(),
+thu_rate: $('q_thu_rate').value.trim(),
+thu_vol: $('q_thu_vol').value.trim(),
+thu_chemical: $('q_thu_chem').value.trim(),
+thu_area: $('q_thu_area').value.trim(),
+thu_mode: $('q_thu_mode').value.trim(),
+
+fri: $('q_fri').value.trim(),
+fri_rate: $('q_fri_rate').value.trim(),
+fri_vol: $('q_fri_vol').value.trim(),
+fri_chemical: $('q_fri_chem').value.trim(),
+fri_area: $('q_fri_area').value.trim(),
+fri_mode: $('q_fri_mode').value.trim(),
+
+sat: $('q_sat').value.trim(),
+sat_rate: $('q_sat_rate').value.trim(),
+sat_vol: $('q_sat_vol').value.trim(),
+sat_chemical: $('q_sat_chem').value.trim(),
+sat_area: $('q_sat_area').value.trim(),
+sat_mode: $('q_sat_mode').value.trim(),
+
+sun: $('q_sun').value.trim(),
+sun_rate: $('q_sun_rate').value.trim(),
+sun_vol: $('q_sun_vol').value.trim(),
+sun_chemical: $('q_sun_chem').value.trim(),
+sun_area: $('q_sun_area').value.trim(),
+sun_mode: $('q_sun_mode').value.trim(),
+
 
     target: $('q_target').value.trim(), justification: $('q_just').value.trim(), morning: $('q_morning').value.trim(),
     evening: $('q_evening').value.trim(), preparedBy: $('q_preparedBy').value.trim(), agronomistRemarks: $('q_agronomistRemarks').value.trim(), supervisorRemarks: $('q_supervisorRemarks').value.trim()
@@ -306,26 +371,43 @@ async function addRow() {
   }
 }
 
-/* Save entire table (bulk_set) */
 async function saveAll() {
-  // read table
+  // Read only the currently displayed (possibly filtered) rows
   const arr = readTableToArray();
+
+  // ✅ Merge table edits back into the master dataset (allRows)
+  allRows = allRows.map(r => {
+    const updated = arr.find(u => u.id === r.id);
+    return updated ? updated : r;
+  });
+
+  // ✅ Add any brand-new rows that don’t have an ID yet
+  arr.forEach(r => {
+    if (!r.id || !allRows.find(existing => existing.id === r.id)) {
+      allRows.push(r);
+    }
+  });
+
   try {
     const res = await fetch('/agro/bulk_set', {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(arr)
+      body: JSON.stringify(allRows)   // ✅ save the full dataset
     });
     const d = await res.json();
-    if (!d.success) { alert('Save failed'); return; }
+    if (!d.success) {
+      alert('Save failed');
+      return;
+    }
     alert(`Saved ${d.count} rows`);
-    await load();
+    await load();   // reload everything fresh
   } catch (err) {
     console.error(err);
     alert('Save failed');
   }
 }
+
 
 function readTableToArray() {
   const out = [];
@@ -350,13 +432,13 @@ function readTableToArray() {
       sat_rate: c[34].innerText.trim(), sat_vol: c[35].innerText.trim(), sat_chemical: c[36].innerText.trim(), sat_area: c[37].innerText.trim(), sat_mode: c[38].innerText.trim(),
       sun_rate: c[39].innerText.trim(), sun_vol: c[40].innerText.trim(), sun_chemical: c[41].innerText.trim(), sun_area: c[42].innerText.trim(), sun_mode: c[43].innerText.trim(),
 
-      target: c[44].innerText.trim(),
-      justification: c[45].innerText.trim(),
-      morning: c[46].innerText.trim(),
-      evening: c[47].innerText.trim(),
-      preparedBy: c[48].innerText.trim(),
-      agronomistRemarks: c[49].innerText.trim(),
-      supervisorRemarks: c[50].innerText.trim()
+      target: c[51].innerText.trim(),
+      justification: c[52].innerText.trim(),
+      morning: c[53].innerText.trim(),
+      evening: c[54].innerText.trim(),
+      preparedBy: c[55].innerText.trim(),
+      agronomistRemarks: c[56].innerText.trim(),
+      supervisorRemarks: c[57].innerText.trim()
     });
   });
   return out;
@@ -515,26 +597,56 @@ function exportExcel(){
   const ws = XLSX.utils.json_to_sheet(arr);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'AgronomistData');
-  XLSX.writeFile(wb, 'agronomist_export.xlsx');
+  XLSX.writeFile(wb, 'agronomist_export.xlsm');
 }
 
-/* Search & utilities */
-function search(){
-  const q = ($('q').value || '').trim().toLowerCase();
-  document.querySelectorAll('#tbl tbody tr').forEach(tr => {
-    tr.style.display = tr.innerText.toLowerCase().includes(q) ? '' : 'none';
-  });
-}
-function clearSearch(){ $('q').value=''; search(); }
+
 
 /* Logout */
 async function logout(){
   await fetch('/logout', { method:'POST', credentials: 'same-origin' });
   location.href = 'login.html';
 }
+async function search(){
+  const q = ($('q').value || '').trim();
+  const fFarm = ($('filter_farm').value || '').trim();
+  const fGH = ($('filter_gh').value || '').trim();
+  const fTime = ($('filter_time').value || '').trim();
 
-/* Start */
-load();
+  // Build query params
+  const params = new URLSearchParams();
+  if(q) params.append('q', q);
+  if(fFarm) params.append('farm', fFarm);
+  if(fGH) params.append('gh', fGH);
+  if(fTime) params.append('time', fTime);
+
+  try {
+    const res = await fetch('/agro/search?' + params.toString(), { credentials: 'same-origin' });
+    if(!res.ok) throw new Error('Server search failed');
+    rows = await res.json();   // search results
+    render();
+// ✅ Keep allRows unchanged so history data remains safe
+
+  } catch(err){
+    console.error(err);
+    alert('Search failed: ' + err.message);
+  }
+}
+
+function clearSearch(){
+  $('q').value = '';
+  $('filter_farm').value = '';
+  $('filter_gh').value = '';
+  $('filter_time').value = '';
+  
+  rows = [...allRows];   // restore full dataset
+  render();
+
+}
+
+// Load historical data when the page first opens
+window.addEventListener("DOMContentLoaded", load);
+
 </script>
 </body>
 </html>

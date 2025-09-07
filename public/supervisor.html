@@ -4,7 +4,18 @@
   <meta charset="utf-8"/>
   <title>Supervisor Dashboard</title>
   <style>
-    body { font-family: Arial; background:#fffdf7; margin:0; padding:16px; }
+    body {
+      font-family: Arial;
+      margin: 0;
+      padding: 16px;
+
+      /* Background image */
+      background-image: url("https://media.licdn.com/dms/image/v2/D4D22AQF0A909R6xIQg/feedshare-shrink_800/feedshare-shrink_800/0/1713288000180?e=2147483647&v=beta&t=SUy7E7JhE6XNMBozDtAWj3zpE_LtBnBgYWQ-OGLFHx4");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
     .topbar { display:flex; gap:10px; align-items:center; }
     .topbar a, .topbar button { padding:8px 10px; border-radius:8px; border:0; cursor:pointer; background:#d48a00; color:#fff; text-decoration:none }
     .table-wrap { overflow:auto; border:1px solid #eee; border-radius:8px; background:#fff; margin-top:12px; }
@@ -13,6 +24,20 @@
     th { background:#ffe9b3; }
     td[contenteditable="true"]{ background:#fffef3; }
     .searchbox { margin-left:auto; display:flex; gap:6px; align-items:center }
+    .table-wrap {
+      overflow:auto;
+      border:1px solid #eee;
+      border-radius:8px;
+      background:#fff;
+      margin-top:12px;
+      max-height: 70vh; /* limit height so scroll activates */
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
   </style>
 </head>
 <body>
@@ -26,8 +51,17 @@
 
   <h1>Supervisor Dashboard</h1>
 
-  <div style="display:flex; gap:8px; align-items:center; margin-top:10px;">
-    <input id="q" placeholder="Search...">
+  <div style="display:flex; gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap;">
+    <input id="q" placeholder="Keyword search...">
+    <select id="farmFilter">
+      <option value="">All Farms</option>
+    </select>
+    <select id="ghFilter">
+      <option value="">All GH</option>
+    </select>
+    <select id="timeFilter">
+      <option value="">All Times</option>
+    </select>
     <button onclick="search()">Search</button>
     <button onclick="clearSearch()">Clear</button>
   </div>
@@ -35,21 +69,19 @@
   <div class="table-wrap">
     <table id="tbl">
       <thead>
-        <!-- keep the same two-row header structure as agronomist for consistency -->
         <tr>
           <th rowspan="2">ID</th><th rowspan="2">Farm</th><th rowspan="2">GH</th><th rowspan="2">AREA</th><th rowspan="2">CROP</th><th rowspan="2">VARIETY</th><th rowspan="2">MODE</th><th rowspan="2">METHOD</th><th rowspan="2">TIME</th>
-          <th colspan="5">MON</th><th colspan="5">TUE</th><th colspan="5">WED</th><th colspan="5">THU</th><th colspan="5">FRI</th><th colspan="5">SAT</th><th colspan="5">SUN</th>
+          <th colspan="6">MON</th><th colspan="6">TUE</th><th colspan="6">WED</th><th colspan="6">THU</th><th colspan="6">FRI</th><th colspan="6">SAT</th><th colspan="6">SUN</th>
           <th rowspan="2">Target</th><th rowspan="2">Justification</th><th rowspan="2">Morning</th><th rowspan="2">Evening</th><th rowspan="2">Prepared By</th><th rowspan="2">Agronomist Remarks</th><th rowspan="2">Supervisor Remarks</th><th rowspan="2">Action</th>
         </tr>
         <tr>
-          <!-- sub headers (same pattern) -->
-          <th>Rate</th><th>Vol(L)</th><th>Chemical</th><th>Area</th><th>Mode</th>
-          <th>Rate</th><th>Vol(L)</th><th>Chemical</th><th>Area</th><th>Mode</th>
-          <th>Rate</th><th>Vol(L)</th><th>Chemical</th><th>Area</th><th>Mode</th>
-          <th>Rate</th><th>Vol(L)</th><th>Chemical</th><th>Area</th><th>Mode</th>
-          <th>Rate</th><th>Vol(L)</th><th>Chemical</th><th>Area</th><th>Mode</th>
-          <th>Rate</th><th>Vol(L)</th><th>Chemical</th><th>Area</th><th>Mode</th>
-          <th>Rate</th><th>Vol(L)</th><th>Chemical</th><th>Area</th><th>Mode</th>
+          <th>sunday</th><th>Rate</th><th>Vol(L)</th><th>Chemical</th><th>Area</th><th>Mode</th>
+          <th>tuesday</th><th>Rate</th><th>Vol(L)</th><th>Chemical</th><th>Area</th><th>Mode</th>
+          <th>wednesday</th><th>Rate</th><th>Vol(L)</th><th>Chemical</th><th>Area</th><th>Mode</th>
+          <th>thursday</th><th>Rate</th><th>Vol(L)</th><th>Chemical</th><th>Area</th><th>Mode</th>
+          <th>friday</th><th>Rate</th><th>Vol(L)</th><th>Chemical</th><th>Area</th><th>Mode</th>
+          <th>saturday</th><th>Rate</th><th>Vol(L)</th><th>Chemical</th><th>Area</th><th>Mode</th>
+          <th>sunday</th><th>Rate</th><th>Vol(L)</th><th>Chemical</th><th>Area</th><th>Mode</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -57,37 +89,86 @@
   </div>
 
 <script>
-async function load(){
-  try{
-    const res = await fetch('/agro', { credentials: 'same-origin' });
-    if (!res.ok) { if (res.status===401) location.href='login.html'; return; }
-    const rows = await res.json();
-    render(rows);
-  }catch(err){ console.error(err); alert('Load failed'); }
+async function load() {
+  document.getElementById('q').value = '';
+  document.getElementById('farmFilter').value = '';
+  document.getElementById('ghFilter').value = '';
+  document.getElementById('timeFilter').value = '';
+  search();
 }
 
 function render(rows){
   const tb = document.querySelector('#tbl tbody');
   tb.innerHTML = rows.map(r => {
-    // build cells same order as agronomist
     const p = k => (r[k]||'');
     return `<tr data-id="${r.id||''}">
       <td>${p('id')}</td>
       <td>${p('farm')}</td><td>${p('gh')}</td><td>${p('area')}</td><td>${p('crop')}</td><td>${p('variety')}</td><td>${p('mode')}</td><td>${p('method')}</td><td>${p('time')}</td>
 
-      <td>${p('mon_rate')}</td><td>${p('mon_vol')}</td><td>${p('mon_chemical')}</td><td>${p('mon_area')}</td><td>${p('mon_mode')}</td>
-      <td>${p('tue_rate')}</td><td>${p('tue_vol')}</td><td>${p('tue_chemical')}</td><td>${p('tue_area')}</td><td>${p('tue_mode')}</td>
-      <td>${p('wed_rate')}</td><td>${p('wed_vol')}</td><td>${p('wed_chemical')}</td><td>${p('wed_area')}</td><td>${p('wed_mode')}</td>
-      <td>${p('thu_rate')}</td><td>${p('thu_vol')}</td><td>${p('thu_chemical')}</td><td>${p('thu_area')}</td><td>${p('thu_mode')}</td>
-      <td>${p('fri_rate')}</td><td>${p('fri_vol')}</td><td>${p('fri_chemical')}</td><td>${p('fri_area')}</td><td>${p('fri_mode')}</td>
-      <td>${p('sat_rate')}</td><td>${p('sat_vol')}</td><td>${p('sat_chemical')}</td><td>${p('sat_area')}</td><td>${p('sat_mode')}</td>
-      <td>${p('sun_rate')}</td><td>${p('sun_vol')}</td><td>${p('sun_chemical')}</td><td>${p('sun_area')}</td><td>${p('sun_mode')}</td>
+      <td>${p('mon')}</td><td>${p('mon_rate')}</td><td>${p('mon_vol')}</td><td>${p('mon_chemical')}</td><td>${p('mon_area')}</td><td>${p('mon_mode')}</td>
+      <td>${p('tue')}</td><td>${p('tue_rate')}</td><td>${p('tue_vol')}</td><td>${p('tue_chemical')}</td><td>${p('tue_area')}</td><td>${p('tue_mode')}</td>
+      <td>${p('wed')}</td><td>${p('wed_rate')}</td><td>${p('wed_vol')}</td><td>${p('wed_chemical')}</td><td>${p('wed_area')}</td><td>${p('wed_mode')}</td>
+      <td>${p('thu')}</td><td>${p('thu_rate')}</td><td>${p('thu_vol')}</td><td>${p('thu_chemical')}</td><td>${p('thu_area')}</td><td>${p('thu_mode')}</td>
+      <td>${p('fri')}</td><td>${p('fri_rate')}</td><td>${p('fri_vol')}</td><td>${p('fri_chemical')}</td><td>${p('fri_area')}</td><td>${p('fri_mode')}</td>
+      <td>${p('sat')}</td><td>${p('sat_rate')}</td><td>${p('sat_vol')}</td><td>${p('sat_chemical')}</td><td>${p('sat_area')}</td><td>${p('sat_mode')}</td>
+      <td>${p('sun')}</td><td>${p('sun_rate')}</td><td>${p('sun_vol')}</td><td>${p('sun_chemical')}</td><td>${p('sun_area')}</td><td>${p('sun_mode')}</td>
 
       <td>${p('target')}</td><td>${p('justification')}</td><td>${p('morning')}</td><td>${p('evening')}</td><td>${p('preparedBy')}</td><td>${p('agronomistRemarks')}</td>
       <td contenteditable="true">${p('supervisorRemarks')}</td>
       <td><button onclick="saveRemarks(this)">Save</button></td>
     </tr>`;
   }).join('');
+
+  // Populate filter dropdowns
+  const farmSet = new Set(), ghSet = new Set(), timeSet = new Set();
+  rows.forEach(r => {
+    if (r.farm) farmSet.add(r.farm);
+    if (r.gh) ghSet.add(r.gh);
+    if (r.time) timeSet.add(r.time);
+  });
+
+  const farmSel = document.getElementById('farmFilter');
+  const ghSel = document.getElementById('ghFilter');
+  const timeSel = document.getElementById('timeFilter');
+
+  farmSel.innerHTML = '<option value="">All Farms</option>' + [...farmSet].map(f=>`<option>${f}</option>`).join('');
+  ghSel.innerHTML = '<option value="">All GH</option>' + [...ghSet].map(f=>`<option>${f}</option>`).join('');
+  timeSel.innerHTML = '<option value="">All Times</option>' + [...timeSet].map(f=>`<option>${f}</option>`).join('');
+}
+
+function readTableToArray() {
+  const out = [];
+  document.querySelectorAll('#tbl tbody tr').forEach(tr => {
+    const c = tr.children;
+    out.push({
+      id: Number(c[0].innerText.trim()) || undefined,
+      farm: c[1].innerText.trim(),
+      gh: c[2].innerText.trim(),
+      area: c[3].innerText.trim(),
+      crop: c[4].innerText.trim(),
+      variety: c[5].innerText.trim(),
+      mode: c[6].innerText.trim(),
+      method: c[7].innerText.trim(),
+      time: c[8].innerText.trim(),
+
+      mon: c[9].innerText.trim(), mon_rate: c[10].innerText.trim(), mon_vol: c[11].innerText.trim(), mon_chemical: c[12].innerText.trim(), mon_area: c[13].innerText.trim(), mon_mode: c[14].innerText.trim(),
+      tue: c[15].innerText.trim(), tue_rate: c[16].innerText.trim(), tue_vol: c[17].innerText.trim(), tue_chemical: c[18].innerText.trim(), tue_area: c[19].innerText.trim(), tue_mode: c[20].innerText.trim(),
+      wed: c[21].innerText.trim(), wed_rate: c[22].innerText.trim(), wed_vol: c[23].innerText.trim(), wed_chemical: c[24].innerText.trim(), wed_area: c[25].innerText.trim(), wed_mode: c[26].innerText.trim(),
+      thu: c[27].innerText.trim(), thu_rate: c[28].innerText.trim(), thu_vol: c[29].innerText.trim(), thu_chemical: c[30].innerText.trim(), thu_area: c[31].innerText.trim(), thu_mode: c[32].innerText.trim(),
+      fri: c[33].innerText.trim(), fri_rate: c[34].innerText.trim(), fri_vol: c[35].innerText.trim(), fri_chemical: c[36].innerText.trim(), fri_area: c[37].innerText.trim(), fri_mode: c[38].innerText.trim(),
+      sat: c[39].innerText.trim(), sat_rate: c[40].innerText.trim(), sat_vol: c[41].innerText.trim(), sat_chemical: c[42].innerText.trim(), sat_area: c[43].innerText.trim(), sat_mode: c[44].innerText.trim(),
+      sun: c[45].innerText.trim(), sun_rate: c[46].innerText.trim(), sun_vol: c[47].innerText.trim(), sun_chemical: c[48].innerText.trim(), sun_area: c[49].innerText.trim(), sun_mode: c[50].innerText.trim(),
+
+      target: c[51].innerText.trim(),
+      justification: c[52].innerText.trim(),
+      morning: c[53].innerText.trim(),
+      evening: c[54].innerText.trim(),
+      preparedBy: c[55].innerText.trim(),
+      agronomistRemarks: c[56].innerText.trim(),
+      supervisorRemarks: c[57].innerText.trim()
+    });
+  });
+  return out;
 }
 
 async function saveRemarks(btn){
@@ -106,12 +187,25 @@ async function saveRemarks(btn){
   }catch(err){ console.error(err); alert('Save failed'); }
 }
 
-function search(){
-  const q = (document.getElementById('q').value||'').trim().toLowerCase();
-  document.querySelectorAll('#tbl tbody tr').forEach(tr=>{
-    tr.style.display = tr.innerText.toLowerCase().includes(q) ? '' : 'none';
-  });
+async function search() {
+  const q = (document.getElementById('q').value || '').trim().toLowerCase();
+  const farmVal = document.getElementById('farmFilter').value.toLowerCase();
+  const ghVal = document.getElementById('ghFilter').value.toLowerCase();
+  const timeVal = document.getElementById('timeFilter').value.toLowerCase();
+
+  try {
+    const res = await fetch(`/agro?q=${encodeURIComponent(q)}&farm=${encodeURIComponent(farmVal)}&gh=${encodeURIComponent(ghVal)}&time=${encodeURIComponent(timeVal)}`, {
+      credentials: 'same-origin'
+    });
+    if (!res.ok) { if (res.status===401) location.href='login.html'; return; }
+    const rows = await res.json();
+    render(rows);
+  } catch(err) {
+    console.error(err);
+    alert('Search failed');
+  }
 }
+
 function clearSearch(){ document.getElementById('q').value=''; search(); }
 async function logout(){ await fetch('/logout', { method:'POST', credentials:'same-origin' }); location.href='login.html'; }
 
